@@ -1,0 +1,11 @@
+{
+  "name": "todo-mvc",
+  "scripts": {
+    "build": "node_modules/.bin/elm make src/Main.elm --output public/app.js",
+    "watch": "chokidar '**/*.elm' -c 'npm run build' --initial"
+  },
+  "devDependencies": {
+    "chokidar-cli": "^1.2.1",
+    "elm": "^0.19.0-bugfix2"
+  }
+}
