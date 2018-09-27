@@ -1,55 +1,14 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Elm TodoMVC</title>
+  <title>Elm Meetup - TodoMVC</title>
   <link rel="stylesheet" href="style.css">
+  <script src="app.js"></script>
 </head>
 
 <body>
-    <div class="todomvc-wrapper" style="visibility: hidden;">
-        <section class="todoapp">
-            <header class="header">
-                <h1>todos</h1>
-                <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="newTodo">
-            </header>
-
-            <section class="main" style="visibility: visible;">
-                <input class="toggle-all" type="checkbox" name="toggle">
-                <label for="toggle-all">Mark all as complete</label>
-                <ul class="todo-list">
-                    <li class="">
-                        <div class="view">
-                            <input class="toggle" type="checkbox">
-                            <label>Install Elm</label>
-                            <button class="destroy"></button>
-                        </div>
-                        <input class="edit" name="title" id="todo-0">
-                    </li>
-                    <li class="completed">
-                        <div class="view">
-                            <input class="toggle" type="checkbox">
-                            <label>Do good work</label>
-                            <button class="destroy"></button>
-                        </div>
-                        <input class="edit" name="title" id="todo-1">
-                    </li>
-                </ul>
-            </section>
-
-            <footer class="footer"><span class="todo-count"><strong>1</strong> item left</span>
-                <ul class="filters">
-                    <li><a href="#/" class="selected">All</a></li>
-                    <li><a href="#/active" class="">Active</a></li>
-                    <li><a href="#/completed" class="">Completed</a></li>
-                </ul>
-                <button class="clear-completed">Clear completed (1)</button>
-            </footer>
-        </section>
-
-        <footer class="info">
-            <p>Double-click to edit a todo</p>
-            <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
-        </footer>
-    </div>
+    <script>
+        var app = Elm.Main.init({node:document.querySelector('body')}); 
+    </script>
 </body>
 
