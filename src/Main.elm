@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (main, removeAt)
 
 import Browser
 import Browser.Events exposing (..)
@@ -36,24 +36,33 @@ emptyModel =
     }
 
 
+type alias KeyCode =
+    Int
+
+
+type alias Index =
+    Int
+
+
 type Msg
-    = ToggleCompletion Int
+    = ToggleCompletion Index
     | AddTask String
-    | Submit Int
+    | Submit KeyCode
     | UpdateInputText String
+    | RemoveTask Index
 
 
 main : Program Flags Model Msg
 main =
     Browser.document
-        { init = \model -> ( emptyModel, Cmd.none )
+        { init = \_ -> ( emptyModel, Cmd.none )
         , view = \model -> { title = "Elm TodoMVC Generated", body = [ view model ] }
         , update = \msg model -> update msg model
         , subscriptions = \_ -> Sub.none
         }
 
 
-onKeyUp : (Int -> a) -> Attribute a
+onKeyUp : (KeyCode -> a) -> Attribute a
 onKeyUp toMsg =
     on "keyup" (Decode.map toMsg keyCode)
 
@@ -70,7 +79,7 @@ view model =
                     , placeholder "What needs to be done?"
                     , autofocus True
                     , name "newTodo"
-                    , type_ "Text"
+                    , type_ "text"
                     , onInput UpdateInputText
                     , onKeyUp Submit
                     ]
@@ -108,7 +117,7 @@ buildTask index task =
         [ div [ class "view" ]
             [ input [ class "toggle", type_ "checkbox", onCheck (\_ -> ToggleCompletion index) ] []
             , label [] [ text task.text ]
-            , button [ class "destroy" ] []
+            , button [ class "destroy", Html.Events.onClick (RemoveTask index) ] []
             ]
         , input [ class "edit", name "title", id "todo-0" ] []
         ]
@@ -171,6 +180,11 @@ update message model =
                     , Cmd.none
                     )
 
+                RemoveTask idx ->
+                    ( { model | tasks = removeAt idx model.tasks }
+                    , Cmd.none
+                    )
+
         numTasks =
             newModel.tasks
                 |> List.filter (.isComplete >> (==) False)
@@ -179,6 +193,26 @@ update message model =
     ( { newModel | numTasks = numTasks }
     , cmd
     )
+
+
+removeAt : Index -> List a -> List a
+removeAt idx list =
+    case list of
+        [] ->
+            []
+
+        head :: tail ->
+            if List.length (head :: tail) < idx then
+                head :: tail
+
+            else if idx < 0 then
+                head :: tail
+
+            else if idx == 0 then
+                tail
+
+            else
+                head :: removeAt (idx - 1) tail
 
 
 completeTask : Int -> Int -> Task -> Task
