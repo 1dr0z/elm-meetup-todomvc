@@ -58,6 +58,7 @@ type Msg
     | UpdateInputText String
     | RemoveTask Index
     | SelectFilter Filter
+    | ClearCompleted
 
 
 main : Program Flags Model Msg
@@ -112,7 +113,15 @@ view model =
                     , li [] [ a [ onClick (SelectFilter Active), selectedClass model Active ] [ text "Active" ] ]
                     , li [] [ a [ onClick (SelectFilter Completed), selectedClass model Completed ] [ text "Completed" ] ]
                     ]
-                , button [ class "clear-completed" ] [ text "Clear completed (1)" ]
+                , button [ onClick ClearCompleted, class "clear-completed" ]
+                    [ let
+                        count =
+                            model.tasks
+                                |> List.filter (matchesFilter Completed)
+                                |> List.length
+                      in
+                      text ("Clear completed (" ++ String.fromInt count ++ ")")
+                    ]
                 ]
             ]
         , footer [ class "info" ]
@@ -220,6 +229,11 @@ update message model =
 
                 SelectFilter filter ->
                     ( { model | selectedFilter = filter }
+                    , Cmd.none
+                    )
+
+                ClearCompleted ->
+                    ( { model | tasks = List.filter (matchesFilter Active) model.tasks }
                     , Cmd.none
                     )
 
