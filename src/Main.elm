@@ -22,6 +22,7 @@ type alias Model =
     , inputText : String
     , numTasks : Int
     , selectedFilter : Filter
+    , editingIndex : Maybe Index
     }
 
 
@@ -40,6 +41,7 @@ emptyModel =
     , inputText = ""
     , numTasks = 2
     , selectedFilter = All
+    , editingIndex = Nothing
     }
 
 
@@ -59,6 +61,8 @@ type Msg
     | RemoveTask Index
     | SelectFilter Filter
     | ClearCompleted
+    | MakeEditable (Maybe Index)
+    | UpdateTask Index String
 
 
 main : Program Flags Model Msg
@@ -100,7 +104,7 @@ view model =
                 , ul [ class "todo-list" ]
                     (model.tasks
                         |> List.filter (matchesFilter model.selectedFilter)
-                        |> List.indexedMap buildTask
+                        |> List.indexedMap (buildTask model.editingIndex)
                     )
                 ]
             , footer [ class "footer" ]
@@ -153,16 +157,31 @@ selectedClass { selectedFilter } desired =
         class ""
 
 
-buildTask : Index -> Task -> Html Msg
-buildTask index task =
-    li [ class (completedClass task.isComplete) ]
-        [ div [ class "view" ]
-            [ input [ class "toggle", type_ "checkbox", onCheck (\_ -> ToggleCompletion index) ] []
-            , label [] [ text task.text ]
-            , button [ class "destroy", Html.Events.onClick (RemoveTask index) ] []
-            ]
-        , input [ class "edit", name "title", id "todo-0" ] []
+buildTask : Maybe Index -> Index -> Task -> Html Msg
+buildTask editing index task =
+    li
+        [ class (completedClass task.isComplete)
+        , class (editingClass (editing == Just index))
         ]
+        [ if editing /= Just index then
+            div [ class "view" ]
+                [ input [ class "toggle", type_ "checkbox", onCheck (\_ -> ToggleCompletion index) ] []
+                , label [ onDoubleClick (MakeEditable (Just index)) ] [ text task.text ]
+                , button [ class "destroy", Html.Events.onClick (RemoveTask index) ] []
+                ]
+
+          else
+            input [ class "edit", value task.text, onInput (UpdateTask index), onBlur (MakeEditable Nothing) ] []
+        ]
+
+
+editingClass : Bool -> String
+editingClass isEditing =
+    if isEditing then
+        "editing"
+
+    else
+        ""
 
 
 completedClass : Bool -> String
@@ -237,6 +256,16 @@ update message model =
                     , Cmd.none
                     )
 
+                MakeEditable index ->
+                    ( { model | editingIndex = index }
+                    , Cmd.none
+                    )
+
+                UpdateTask index text ->
+                    ( { model | tasks = List.indexedMap (updateTask index text) model.tasks }
+                    , Cmd.none
+                    )
+
         numTasks =
             newModel.tasks
                 |> List.filter (.isComplete >> (==) False)
@@ -265,6 +294,15 @@ removeAt idx list =
 
             else
                 head :: removeAt (idx - 1) tail
+
+
+updateTask : Int -> String -> Int -> Task -> Task
+updateTask tidx text index task =
+    if index == tidx then
+        { task | text = text }
+
+    else
+        task
 
 
 completeTask : Int -> Int -> Task -> Task
