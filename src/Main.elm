@@ -1,7 +1,6 @@
 module Main exposing (main, removeAt)
 
 import Browser
-import Browser.Events exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -22,7 +21,14 @@ type alias Model =
     { tasks : List Task
     , inputText : String
     , numTasks : Int
+    , selectedFilter : Filter
     }
+
+
+type Filter
+    = All
+    | Active
+    | Completed
 
 
 emptyModel : Model
@@ -33,6 +39,7 @@ emptyModel =
         ]
     , inputText = ""
     , numTasks = 2
+    , selectedFilter = All
     }
 
 
@@ -50,6 +57,7 @@ type Msg
     | Submit KeyCode
     | UpdateInputText String
     | RemoveTask Index
+    | SelectFilter Filter
 
 
 main : Program Flags Model Msg
@@ -89,7 +97,10 @@ view model =
                 [ input [ class "toggle-all", type_ "checkbox", name "toggle" ] []
                 , label [ for "toggle-all" ] [ text "Mark all as complete" ]
                 , ul [ class "todo-list" ]
-                    (List.indexedMap buildTask model.tasks)
+                    (model.tasks
+                        |> List.filter (matchesFilter model.selectedFilter)
+                        |> List.indexedMap buildTask
+                    )
                 ]
             , footer [ class "footer" ]
                 [ span [ class "todo-count" ]
@@ -97,9 +108,9 @@ view model =
                     , text " item left"
                     ]
                 , ul [ class "filters" ]
-                    [ li [] [ a [ href "#/", class "selected" ] [ text "All" ] ]
-                    , li [] [ a [ href "#/active" ] [ text "Active" ] ]
-                    , li [] [ a [ href "#/completed" ] [ text "Completed" ] ]
+                    [ li [] [ a [ onClick (SelectFilter All), selectedClass model All ] [ text "All" ] ]
+                    , li [] [ a [ onClick (SelectFilter Active), selectedClass model Active ] [ text "Active" ] ]
+                    , li [] [ a [ onClick (SelectFilter Completed), selectedClass model Completed ] [ text "Completed" ] ]
                     ]
                 , button [ class "clear-completed" ] [ text "Clear completed (1)" ]
                 ]
@@ -111,7 +122,29 @@ view model =
         ]
 
 
-buildTask : Int -> Task -> Html Msg
+matchesFilter : Filter -> Task -> Bool
+matchesFilter filter task =
+    case filter of
+        All ->
+            True
+
+        Active ->
+            not task.isComplete
+
+        Completed ->
+            task.isComplete
+
+
+selectedClass : Model -> Filter -> Attribute Msg
+selectedClass { selectedFilter } desired =
+    if selectedFilter == desired then
+        class "selected"
+
+    else
+        class ""
+
+
+buildTask : Index -> Task -> Html Msg
 buildTask index task =
     li [ class (completedClass task.isComplete) ]
         [ div [ class "view" ]
@@ -182,6 +215,11 @@ update message model =
 
                 RemoveTask idx ->
                     ( { model | tasks = removeAt idx model.tasks }
+                    , Cmd.none
+                    )
+
+                SelectFilter filter ->
+                    ( { model | selectedFilter = filter }
                     , Cmd.none
                     )
 
