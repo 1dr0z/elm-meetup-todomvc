@@ -6,6 +6,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http exposing (Request)
 import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode exposing (Value)
 
 
 type alias Flags =
@@ -31,6 +32,14 @@ decodeComplete =
 decodeTask : Decoder Task
 decodeTask =
     Decode.map2 Task decodeText decodeComplete
+
+
+encodeTask : Task -> Value
+encodeTask task =
+    Encode.object
+        [ ( "text", Encode.string task.text )
+        , ( "complete", Encode.bool task.isComplete )
+        ]
 
 
 type alias Model =
@@ -73,7 +82,6 @@ type alias Index =
 
 type Msg
     = ToggleCompletion Index
-    | AddTask String
     | Submit KeyCode
     | UpdateInputText String
     | RemoveTask Index
@@ -82,6 +90,7 @@ type Msg
     | MakeEditable (Maybe Index)
     | UpdateTask Index String
     | LoadedTasks (Result Http.Error (List Task))
+    | PostedTask (Result Http.Error ())
 
 
 main : Program Flags Model Msg
@@ -242,6 +251,19 @@ getTasks =
         }
 
 
+postTask : Task -> Request ()
+postTask task =
+    Http.request
+        { body = Http.jsonBody (encodeTask task)
+        , expect = Http.expectJson (Decode.succeed ())
+        , headers = []
+        , method = "POST"
+        , timeout = Just 30
+        , url = "http://localhost:3000/tasks"
+        , withCredentials = False
+        }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     let
@@ -252,17 +274,16 @@ update message model =
                     , Cmd.none
                     )
 
-                AddTask body ->
-                    ( { model | tasks = { text = body, isComplete = False } :: model.tasks }
-                    , Cmd.none
-                    )
-
                 Submit keyCode ->
                     if keyCode == enterKey then
+                        let
+                            task =
+                                { text = model.inputText, isComplete = False }
+                        in
                         ( model
                             |> addTask model.inputText
                             |> clearInput
-                        , Cmd.none
+                        , Http.send PostedTask (postTask task)
                         )
 
                     else
@@ -304,6 +325,12 @@ update message model =
                     )
 
                 LoadedTasks (Err err) ->
+                    ( model, Cmd.none )
+
+                PostedTask (Ok _) ->
+                    ( model, Cmd.none )
+
+                PostedTask (Err _) ->
                     ( model, Cmd.none )
 
         numTasks =
