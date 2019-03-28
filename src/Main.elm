@@ -1,10 +1,11 @@
-module Main exposing (main, removeAt)
+module Main exposing (Filter(..), Flags, Index, KeyCode, Model, Msg(..), Task, addTask, buildTask, clearInput, completeTask, completedClass, decodeComplete, decodeTask, decodeText, editingClass, emptyModel, enterKey, getTasks, initialCmd, main, matchesFilter, onKeyUp, removeAt, selectedClass, update, updateTask, view)
 
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Json.Decode as Decode
+import Http exposing (Request)
+import Json.Decode as Decode exposing (Decoder)
 
 
 type alias Flags =
@@ -15,6 +16,21 @@ type alias Task =
     { text : String
     , isComplete : Bool
     }
+
+
+decodeText : Decoder String
+decodeText =
+    Decode.field "text" Decode.string
+
+
+decodeComplete : Decoder Bool
+decodeComplete =
+    Decode.field "complete" Decode.bool
+
+
+decodeTask : Decoder Task
+decodeTask =
+    Decode.map2 Task decodeText decodeComplete
 
 
 type alias Model =
@@ -34,15 +50,17 @@ type Filter
 
 emptyModel : Model
 emptyModel =
-    { tasks =
-        [ { text = "Install Elm (Dynamically)", isComplete = False }
-        , { text = "Install Elm (Dynamically)", isComplete = False }
-        ]
+    { tasks = []
     , inputText = ""
-    , numTasks = 2
+    , numTasks = 0
     , selectedFilter = All
     , editingIndex = Nothing
     }
+
+
+initialCmd : Cmd Msg
+initialCmd =
+    Http.send LoadedTasks getTasks
 
 
 type alias KeyCode =
@@ -63,12 +81,13 @@ type Msg
     | ClearCompleted
     | MakeEditable (Maybe Index)
     | UpdateTask Index String
+    | LoadedTasks (Result Http.Error (List Task))
 
 
 main : Program Flags Model Msg
 main =
     Browser.document
-        { init = \_ -> ( emptyModel, Cmd.none )
+        { init = \_ -> ( emptyModel, initialCmd )
         , view = \model -> { title = "Elm TodoMVC Generated", body = [ view model ] }
         , update = \msg model -> update msg model
         , subscriptions = \_ -> Sub.none
@@ -210,6 +229,19 @@ clearInput model =
     { model | inputText = "" }
 
 
+getTasks : Request (List Task)
+getTasks =
+    Http.request
+        { body = Http.emptyBody
+        , expect = Http.expectJson (Decode.list decodeTask)
+        , headers = []
+        , method = "GET"
+        , timeout = Just 30
+        , url = "http://localhost:3000/tasks"
+        , withCredentials = False
+        }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     let
@@ -265,6 +297,14 @@ update message model =
                     ( { model | tasks = List.indexedMap (updateTask index text) model.tasks }
                     , Cmd.none
                     )
+
+                LoadedTasks (Ok tasks) ->
+                    ( { model | tasks = tasks }
+                    , Cmd.none
+                    )
+
+                LoadedTasks (Err err) ->
+                    ( model, Cmd.none )
 
         numTasks =
             newModel.tasks
